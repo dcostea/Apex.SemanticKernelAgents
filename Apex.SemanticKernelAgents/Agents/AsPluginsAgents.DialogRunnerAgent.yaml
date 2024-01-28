@@ -1,0 +1,26 @@
+﻿name: AsPluginsDialogRunnerAgent
+template_format: semantic-kernel
+template: |
+  Process each verbal action in [Verbal actions] list until all verbal actions are fully processed by following the next steps:
+   1. Identify all the applicable assistants in the current verbal action.
+   2. Carefully invoke all identified assistants, one by one, and let them generate dialog lines.
+   3. Do not include the verbal action into the dialog line.
+
+  Check again and make sure you don't miss out on any verbal action in the list. If you don't miss it, I will tip you 20 dollars!
+
+  Respond only with a valid JSON response like in the next template: 
+  ```json
+  [
+    {
+      "verbal_action": "verbal action 1",
+      "assistant": "assistant 1",
+      "dialog_line": "dialog line 1"
+    },
+    {
+      "verbal_action": "verbal action 2",
+      "assistant": "assistant 2",
+      "dialog_line": "dialog line 2"
+    }
+  ]
+  ```
+description: A chat bot that generates dialog lines using the applicable assistants.

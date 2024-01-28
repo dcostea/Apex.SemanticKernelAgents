@@ -1,0 +1,6 @@
+@Apex.SemanticKernelAgents_HostAddress = https://localhost:7129
+
+GET {{Apex.SemanticKernelAgents_HostAddress}}/ping
+Accept: application/json
+
+###

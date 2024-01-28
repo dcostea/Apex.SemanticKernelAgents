@@ -1,0 +1,81 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <UserSecretsId>de68ab9b-b106-4e2a-aa37-ac3e1746bfda</UserSecretsId>
+	<NoWarn>SKEXP0013;SKEXP0101;SKEXP0060;SKEXP0061;SKEXP0004</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+	  <None Update="Agents\AsPluginsAgents.DialogRunnerAgent.yaml">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Agents\AsPluginsAgents.DonQuixoteDialogAgent.yaml">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Agents\AsPluginsAgents.JackSparrowDialogAgent.yaml">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Agents\AsPluginsAgents.ShakespeareDialogAgent.yaml">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Agents\AsPluginsAgents.YodaDialogAgent.yaml">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Agents\JointAgents.DialogRunnerAgent.yaml">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Agents\JointAgents.DonQuixoteDialogAgent.yaml">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Agents\JointAgents.JackSparrowDialogAgent.yaml">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Agents\JointAgents.ShakespeareDialogAgent.yaml">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Agents\JointAgents.YodaDialogAgent.yaml">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Agents\HierarchicalAgents.JackSparrowDialogAgent.yaml">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Agents\HierarchicalAgents.ShakespeareDialogAgent.yaml">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Agents\HierarchicalAgents.YodaDialogAgent.yaml">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Agents\HierarchicalAgents.DonQuixoteDialogAgent.yaml">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Agents\HierarchicalAgents.DialogRunnerAgent.yaml">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+	<PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.0" />
+	<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+	<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
+	<PackageReference Include="Microsoft.SemanticKernel" Version="1.2.0" />
+	<PackageReference Include="Microsoft.SemanticKernel.Abstractions" Version="1.2.0" />
+	<PackageReference Include="Microsoft.SemanticKernel.Planners.Handlebars" Version="1.2.0-preview" />
+	<PackageReference Include="Microsoft.SemanticKernel.Planners.OpenAI" Version="1.2.0-preview" />
+	<PackageReference Include="Microsoft.SemanticKernel.Experimental.Agents" Version="1.2.0-alpha" />
+	<PackageReference Include="Microsoft.SemanticKernel.Yaml" Version="1.2.0" />
+	<PackageReference Include="YamlDotNet" Version="15.1.0" />
+	<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+	<PackageReference Include="Serilog" Version="3.1.1" />
+	<PackageReference Include="Serilog.AspNetCore" Version="8.0.1" />
+	<PackageReference Include="Serilog.Settings.Configuration" Version="8.0.0" />
+	<PackageReference Include="Serilog.Exceptions" Version="8.4.0" />
+	<PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+	<PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+  </ItemGroup>
+
+</Project>
