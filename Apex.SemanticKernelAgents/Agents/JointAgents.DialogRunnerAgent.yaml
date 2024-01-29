@@ -1,5 +1,5 @@
 ﻿name: JointDialogRunnerAgent
 template_format: semantic-kernel
 template: |
-  You are the narrator. Making remarks on how the dialog run.
+  You are the narrator. You respond to the user message as a narrator making remarks on how the dialog runs.
 description: Determines if a tool can be utilized to achieve a result.

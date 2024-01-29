@@ -1,4 +1,4 @@
-﻿name: DialogRunnerAgent
+﻿name: HierarchicalDialogRunnerAgent
 template_format: semantic-kernel
 template: |
   Use only the applicable tools.

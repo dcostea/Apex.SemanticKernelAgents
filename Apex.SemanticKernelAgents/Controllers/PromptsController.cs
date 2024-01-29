@@ -157,7 +157,7 @@ public class PromptsController : ControllerBase
             var goal = """
             [Verbal actions]
             Jack Sparrow, Shakespeare, Don Quixote, and Yoda are having a feast. Don Quixote likes coca-cola! All making remarks about the favorite drinks.
-            Jack Sparrow makes a bad joke about Don Quixote.
+            Jack Sparrow makes a bad joke about Don Quixote drink tastes.
             Jack Sparrow gets a threat from Don Quixote and Don Quixote is launching a fake attack.
             Shakespeare sends strong words to Jack Sparrow but Jack Sparrow answers bravely and provocatively.
             Yoda warns Jack Sparrow, but Jack Sparrow slaps Don Quixote.
@@ -210,7 +210,7 @@ public class PromptsController : ControllerBase
     }
 
     [HttpGet("dialog/joint")]
-    public async Task<IActionResult> GetHJointDialog()
+    public async Task<IActionResult> GetJointDialog()
     {
         List<IAgent> agents = [];
         IAgentThread? thread = null;
@@ -264,7 +264,7 @@ public class PromptsController : ControllerBase
         try
         {
             thread = await runnerAgent.NewThreadAsync();
-            Log.Information($"DIALOG START ((joint agents, thread id: {thread.Id})");
+            Log.Information($"DIALOG START (joint agents, thread id: {thread.Id})");
             Log.Information("****************************************");
 
             foreach (var scriptStep in scriptSteps)
@@ -281,7 +281,7 @@ public class PromptsController : ControllerBase
                     Console.Write("    Jack Sparrow: ");
                     PrintHelper.PrintMessage(message!);
                     Console.ResetColor();
-                    result.Add($"{message.Role} > {message.Content}");
+                    result.Add($"{message.Role} > Jack Sparrow > {message.Content}");
                 }
 
                 var yodaAgentMessages = await thread.InvokeAsync(yodaAgent).ToArrayAsync();
@@ -291,7 +291,7 @@ public class PromptsController : ControllerBase
                     Console.Write("    Yoda: ");
                     PrintHelper.PrintMessage(message!);
                     Console.ResetColor();
-                    result.Add($"{message.Role} > {message.Content}");
+                    result.Add($"{message.Role} > Yoda > {message.Content}");
                 }
 
                 var shakespeareAgentMessages = await thread.InvokeAsync(shakespeareAgent).ToArrayAsync();
@@ -301,7 +301,7 @@ public class PromptsController : ControllerBase
                     Console.Write("    Shakespeare: ");
                     PrintHelper.PrintMessage(message!);
                     Console.ResetColor();
-                    result.Add($"{message.Role} > {message.Content}");
+                    result.Add($"{message.Role} > Shakespeare > {message.Content}");
                 }
 
                 var quixoteAgentMessages = await thread.InvokeAsync(quixoteAgent).ToArrayAsync();
@@ -311,16 +311,18 @@ public class PromptsController : ControllerBase
                     Console.Write("    Don Quixote: ");
                     PrintHelper.PrintMessage(message!);
                     Console.ResetColor();
-                    result.Add($"{message.Role} > {message.Content}");
+                    result.Add($"{message.Role} > Don Quixote > {message.Content}");
                 }
-            }
 
-            var runnerMessages = await thread.InvokeAsync(runnerAgent).ToArrayAsync();
-            foreach (var message in runnerMessages)
-            {
-                Console.Write("    Dialog Writer: ");
-                PrintHelper.PrintMessage(message!);
-                result.Add($"{message.Role} > {message.Content}");
+                var runnerMessages = await thread.InvokeAsync(runnerAgent).ToArrayAsync();
+                foreach (var message in runnerMessages)
+                {
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                    Console.Write("    Narrator: ");
+                    PrintHelper.PrintMessage(message!);
+                    Console.ResetColor();
+                    result.Add($"{message.Role} > Narrator > {message.Content}");
+                }
             }
         }
         catch (AgentException ex)
