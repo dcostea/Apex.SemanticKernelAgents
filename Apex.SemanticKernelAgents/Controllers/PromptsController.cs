@@ -5,6 +5,7 @@ using Microsoft.SemanticKernel.Experimental.Agents;
 using Apex.SemanticKernelAgents.Plugins;
 using Microsoft.SemanticKernel.Experimental.Agents.Exceptions;
 using Apex.SemanticKernelAgents.Helpers;
+using Humanizer;
 
 namespace Apex.SemanticKernelAgents.Controllers;
 
@@ -55,8 +56,8 @@ public class PromptsController : ControllerBase
 
         List<string> scriptSteps =
         [
-            "Jack Sparrow, Shakespeare, Don Quixote, and Yoda are having a feast. Don Quixote likes coca-cola! All making remarks about the favorite drinks.",
-            "Jack Sparrow makes a bad joke about Don Quixote drink tastes.",
+            "Jack Sparrow, Shakespeare, Don Quixote, and Yoda are having a feast. Don Quixote likes coca-cola! All making remarks about their favorite drinks.",
+            "Jack Sparrow makes a bad joke about Don Quixote's taste in drinks.",
             "Jack Sparrow gets a threat from Don Quixote and Don Quixote is launching a fake attack.",
             "Shakespeare sends strong words to Jack Sparrow but Jack Sparrow answers bravely and provocatively.",
             "Yoda warns Jack Sparrow, but Jack Sparrow slaps Don Quixote.",
@@ -71,14 +72,13 @@ public class PromptsController : ControllerBase
         try
         {
             thread = await runnerAgent.NewThreadAsync();
-            Log.Information($"DIALOG START ((hierarchical agents, thread id: {thread.Id})");
+            Log.Information($"DIALOG START (hierarchical agents, thread id: {thread.Id})");
             Log.Information("****************************************");
 
             foreach (var messages in scriptSteps.Select(m => thread!.InvokeAsync(runnerAgent, m)))
             {
                 await foreach (var message in messages)
                 {
-                    // TODO colorize by characters
                     PrintHelper.PrintMessage(message!);
                     result.Add($"{message.Role} > {message.Content}");
                 }
@@ -156,8 +156,8 @@ public class PromptsController : ControllerBase
 
             var goal = """
             [Verbal actions]
-            Jack Sparrow, Shakespeare, Don Quixote, and Yoda are having a feast. Don Quixote likes coca-cola! All making remarks about the favorite drinks.
-            Jack Sparrow makes a bad joke about Don Quixote drink tastes.
+            Jack Sparrow, Shakespeare, Don Quixote, and Yoda are having a feast. Don Quixote likes coca-cola! All making remarks about their favorite drinks.
+            Jack Sparrow makes a bad joke about Don Quixote's taste in drinks.
             Jack Sparrow gets a threat from Don Quixote and Don Quixote is launching a fake attack.
             Shakespeare sends strong words to Jack Sparrow but Jack Sparrow answers bravely and provocatively.
             Yoda warns Jack Sparrow, but Jack Sparrow slaps Don Quixote.
@@ -177,10 +177,7 @@ public class PromptsController : ControllerBase
                 Console.ForegroundColor = ConsoleColor.DarkGray;
                 Console.WriteLine($"{message.Role} [{message.Id}] [{message.AgentId}] >");
                 Console.ResetColor();
-                foreach (var line in lines)
-                {
-                    Console.WriteLine(line);
-                }
+                PrintHelper.PrintColoredLines(lines);
             }
         }
         catch (AgentException ex)
@@ -248,8 +245,8 @@ public class PromptsController : ControllerBase
 
         List<string> scriptSteps =
         [
-            "Jack Sparrow, Shakespeare, Don Quixote, and Yoda are having a feast. Don Quixote likes coca-cola! All making remarks about the favorite drinks.",
-            "Jack Sparrow makes a bad joke about Don Quixote drink tastes.",
+            "Jack Sparrow, Shakespeare, Don Quixote, and Yoda are having a feast. Don Quixote likes coca-cola! All making remarks about their favorite drinks.",
+            "Jack Sparrow makes a bad joke about Don Quixote's taste in drinks.",
             "Jack Sparrow gets a threat from Don Quixote and Don Quixote is launching a fake attack.",
             "Shakespeare sends strong words to Jack Sparrow but Jack Sparrow answers bravely and provocatively.",
             "Yoda warns Jack Sparrow, but Jack Sparrow slaps Don Quixote.",
@@ -279,7 +276,8 @@ public class PromptsController : ControllerBase
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.Write("    Jack Sparrow: ");
-                    PrintHelper.PrintMessage(message!);
+                    var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
+                    PrintHelper.PrintLines(lines);
                     Console.ResetColor();
                     result.Add($"{message.Role} > Jack Sparrow > {message.Content}");
                 }
@@ -289,7 +287,8 @@ public class PromptsController : ControllerBase
                 {
                     Console.ForegroundColor = ConsoleColor.Blue;
                     Console.Write("    Yoda: ");
-                    PrintHelper.PrintMessage(message!);
+                    var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
+                    PrintHelper.PrintLines(lines);
                     Console.ResetColor();
                     result.Add($"{message.Role} > Yoda > {message.Content}");
                 }
@@ -299,7 +298,8 @@ public class PromptsController : ControllerBase
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.Write("    Shakespeare: ");
-                    PrintHelper.PrintMessage(message!);
+                    var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
+                    PrintHelper.PrintLines(lines);
                     Console.ResetColor();
                     result.Add($"{message.Role} > Shakespeare > {message.Content}");
                 }
@@ -309,7 +309,8 @@ public class PromptsController : ControllerBase
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.Write("    Don Quixote: ");
-                    PrintHelper.PrintMessage(message!);
+                    var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
+                    PrintHelper.PrintLines(lines);
                     Console.ResetColor();
                     result.Add($"{message.Role} > Don Quixote > {message.Content}");
                 }
@@ -319,7 +320,8 @@ public class PromptsController : ControllerBase
                 {
                     Console.ForegroundColor = ConsoleColor.Gray;
                     Console.Write("    Narrator: ");
-                    PrintHelper.PrintMessage(message!);
+                    var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
+                    PrintHelper.PrintLines(lines);
                     Console.ResetColor();
                     result.Add($"{message.Role} > Narrator > {message.Content}");
                 }

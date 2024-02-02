@@ -6,19 +6,19 @@ namespace Apex.SemanticKernelAgents.Plugins;
 
 public class AlertsPlugin
 {
-    [KernelFunction, Description("Somebody is talking about the rum")]
+    [KernelFunction, Description("Somebody is saying the word 'rum'")]
     public void RumAlert()
     {
         Log.Information("RUM ALERT!");
     }
 
-    [KernelFunction, Description("Somebody is talking about the force")]
+    [KernelFunction, Description("Somebody is saying the word 'force'")]
     public void ForceAlert()
     {
         Log.Information("FORCE ALERT!");
     }
 
-    [KernelFunction, Description("Somebody is talking about coca-cola")]
+    [KernelFunction, Description("Somebody is saying the word 'coca-cola'")]
     public void CocaColaAlert()
     {
         Log.Information("COCA-COLA ALERT!");
