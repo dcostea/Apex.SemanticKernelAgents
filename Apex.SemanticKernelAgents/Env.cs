@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-
-namespace Apex.SemanticKernelAgents;
+﻿namespace Apex.SemanticKernelAgents;
 
 // Copyright (c) Microsoft. All rights reserved.
 

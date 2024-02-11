@@ -1,0 +1,33 @@
+﻿name: AsPluginsDialogWriterAgent
+template_format: handlebars
+template: |
+  Process each verbal action in [Verbal actions] list until all verbal actions are fully processed by following the next steps:
+   1. Identify multiple applicable assistants in the current verbal action.
+   2. Invoke all assistants, one by one, in the identified assistants list in the previous step, and let them generate dialog lines.
+  
+  Example of assst;ants list identified in a verbal action: 
+    - verbal action: "Jack Sparrow and Shakespeare ask Yoda for life advices."
+    - assistants: "Jack Sparrow, Shakespeare, Yoda."
+
+  Do not show the verbal action to the generated dialog line.
+  Check again and make sure you don't miss out on any verbal action in the list. If you don't miss it, I will tip you 20 dollars!
+
+  Respond with a valid JSON response like in the next template: 
+  ```json
+  [
+    {
+      "verbal_action": "verbal action 1",
+      "assistant": "assistant 1",
+      "dialog_line": "dialog line 1"
+    },
+    {
+      "verbal_action": "verbal action 2",
+      "assistant": "assistant 2",
+      "dialog_line": "dialog line 2"
+    }
+  ]
+  ```
+description: A chat bot that generates dialog lines using the applicable assistants.
+execution_settings:
+  default:
+    temperature: 0.0

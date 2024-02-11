@@ -35,15 +35,13 @@ public class PrintHelper
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine($"{line}");
-                Console.ResetColor();
                 continue;
             }
 
-            if (line.Contains("assistant") && line.Contains("Quixote"))
+            if (line.Contains("assistant") && line.Contains("Quijote"))
             {
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine($"{line}");
-                Console.ResetColor();
                 continue;
             }
 
@@ -51,7 +49,6 @@ public class PrintHelper
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"{line}");
-                Console.ResetColor();
                 continue;
             }
 
@@ -59,12 +56,14 @@ public class PrintHelper
             {
                 Console.ForegroundColor = ConsoleColor.Blue;
                 Console.WriteLine($"{line}");
-                Console.ResetColor();
                 continue;
             }
 
+            Console.ResetColor();
             Console.WriteLine($"{line}");
         }
+
+        Console.ResetColor();
     }
 
     public static void PrintLines(string[] lines)

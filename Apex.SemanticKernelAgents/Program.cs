@@ -1,4 +1,3 @@
-using Microsoft.SemanticKernel;
 using Serilog;
 
 namespace Apex.SemanticKernelAgents;

@@ -5,7 +5,6 @@ using Microsoft.SemanticKernel.Experimental.Agents;
 using Apex.SemanticKernelAgents.Plugins;
 using Microsoft.SemanticKernel.Experimental.Agents.Exceptions;
 using Apex.SemanticKernelAgents.Helpers;
-using Humanizer;
 
 namespace Apex.SemanticKernelAgents.Controllers;
 
@@ -39,43 +38,43 @@ public class PromptsController : ControllerBase
             .WithPlugin(newsPlugin)
             .BuildAsync());
 
-        var quixoteAgent = Track(await new AgentBuilder()
+        var quijoteAgent = Track(await new AgentBuilder()
             .WithOpenAIChatCompletion(Env.Var("OpenAI:ModelId")!, Env.Var("OpenAI:ApiKey")!)
-            .FromTemplatePath(@"Agents/HierarchicalAgents.DonQuixoteDialogAgent.yaml")
+            .FromTemplatePath(@"Agents/HierarchicalAgents.DonQuijoteDialogAgent.yaml")
             .WithPlugin(newsPlugin)
             .BuildAsync());
 
-        var runnerAgent = Track(await new AgentBuilder()
+        var dialogWriterAgent = Track(await new AgentBuilder()
             .WithOpenAIChatCompletion(Env.Var("OpenAI:ModelId")!, Env.Var("OpenAI:ApiKey")!)
-            .FromTemplatePath(@"Agents/HierarchicalAgents.DialogRunnerAgent.yaml")
+            .FromTemplatePath(@"Agents/HierarchicalAgents.DialogWriterAgent.yaml")
             .WithPlugin(jackAgent.AsPlugin())
             .WithPlugin(yodaAgent.AsPlugin())
             .WithPlugin(shakespeareAgent.AsPlugin())
-            .WithPlugin(quixoteAgent.AsPlugin())
+            .WithPlugin(quijoteAgent.AsPlugin())
             .BuildAsync());
 
         List<string> scriptSteps =
         [
-            "Jack Sparrow, Shakespeare, Don Quixote, and Yoda are having a feast. Don Quixote likes coca-cola! All making remarks about their favorite drinks.",
-            "Jack Sparrow makes a bad joke about Don Quixote's taste in drinks.",
-            "Jack Sparrow gets a threat from Don Quixote and Don Quixote is launching a fake attack.",
+            "Jack Sparrow, Shakespeare, Don Quijote, and Yoda are having a feast. Don Quijote likes coca-cola! All making remarks about their favorite drinks.",
+            "Jack Sparrow makes a bad joke about Don Quijote's taste in drinks.",
+            "Jack Sparrow gets a threat from Don Quijote and Don Quijote is launching a fake attack.",
             "Shakespeare sends strong words to Jack Sparrow but Jack Sparrow answers bravely and provocatively.",
-            "Yoda warns Jack Sparrow, but Jack Sparrow slaps Don Quixote.",
+            "Yoda warns Jack Sparrow, but Jack Sparrow slaps Don Quijote.",
             "Yoda hits Jack Sparrow with an energy blast, resulting in an epic victory.",
-            "Jack Sparrow dies and Don Quixote falls down to his knees weeping for Jack Sparrow.",
-            "Shakespeare, Yoda or Don Quixote responds with 'VICTORY!'",
-            "Yoda tells an epitaph for Jack Sparrow, Don Quixote says nothing.",
+            "Jack Sparrow dies and Don Quijote falls down to his knees weeping for Jack Sparrow.",
+            "Shakespeare, Yoda or Don Quijote responds with 'VICTORY!'",
+            "Yoda tells an epitaph for Jack Sparrow, Don Quijote says nothing.",
         ];
 
         var result = new List<string>();
 
         try
         {
-            thread = await runnerAgent.NewThreadAsync();
+            thread = await dialogWriterAgent.NewThreadAsync();
             Log.Information($"DIALOG START (hierarchical agents, thread id: {thread.Id})");
             Log.Information("****************************************");
 
-            foreach (var messages in scriptSteps.Select(m => thread!.InvokeAsync(runnerAgent, m)))
+            foreach (var messages in scriptSteps.Select(m => thread!.InvokeAsync(dialogWriterAgent, m)))
             {
                 await foreach (var message in messages)
                 {
@@ -139,39 +138,39 @@ public class PromptsController : ControllerBase
                 .WithPlugin(newsPlugin)
                 .BuildAsync());
 
-            var quixoteAgent = Track(await new AgentBuilder()
+            var quijoteAgent = Track(await new AgentBuilder()
                 .WithOpenAIChatCompletion(Env.Var("OpenAI:ModelId")!, Env.Var("OpenAI:ApiKey")!)
-                .FromTemplatePath(@"Agents/AsPluginsAgents.DonQuixoteDialogAgent.yaml")
+                .FromTemplatePath(@"Agents/AsPluginsAgents.DonQuijoteDialogAgent.yaml")
                 .WithPlugin(newsPlugin)
                 .BuildAsync());
 
-            var runnerAgent = Track(await new AgentBuilder()
+            var dialogWriterAgent = Track(await new AgentBuilder()
                 .WithOpenAIChatCompletion(Env.Var("OpenAI:ModelId")!, Env.Var("OpenAI:ApiKey")!)
-                .FromTemplatePath(@"Agents/AsPluginsAgents.DialogRunnerAgent.yaml")
+                .FromTemplatePath(@"Agents/AsPluginsAgents.DialogWriterAgent.yaml")
                 .WithPlugin(jackAgent.AsPlugin())
                 .WithPlugin(yodaAgent.AsPlugin())
                 .WithPlugin(shakespeareAgent.AsPlugin())
-                .WithPlugin(quixoteAgent.AsPlugin())
+                .WithPlugin(quijoteAgent.AsPlugin())
                 .BuildAsync());
 
             var goal = """
             [Verbal actions]
-            Jack Sparrow, Shakespeare, Don Quixote, and Yoda are having a feast. Don Quixote likes coca-cola! All making remarks about their favorite drinks.
-            Jack Sparrow makes a bad joke about Don Quixote's taste in drinks.
-            Jack Sparrow gets a threat from Don Quixote and Don Quixote is launching a fake attack.
+            Jack Sparrow, Shakespeare, Don Quijote, and Yoda are having a feast. Don Quijote likes coca-cola! All making remarks about their favorite drinks.
+            Jack Sparrow makes a bad joke about Don Quijote's taste in drinks.
+            Jack Sparrow gets a threat from Don Quijote and Don Quijote is launching a fake attack.
             Shakespeare sends strong words to Jack Sparrow but Jack Sparrow answers bravely and provocatively.
-            Yoda warns Jack Sparrow, but Jack Sparrow slaps Don Quixote.
+            Yoda warns Jack Sparrow, but Jack Sparrow slaps Don Quijote.
             Yoda hits Jack Sparrow with an energy blast, resulting in an epic victory.
-            Jack Sparrow dies and Don Quixote falls down to his knees weeping for Jack Sparrow.
-            Shakespeare, Yoda or Don Quixote responds with 'VICTORY!'
-            Yoda tells an epitaph for Jack Sparrow, Don Quixote says nothing.
+            Jack Sparrow dies and Don Quijote falls down to his knees weeping for Jack Sparrow.
+            Shakespeare, Yoda or Don Quijote responds with 'VICTORY!'
+            Yoda tells an epitaph for Jack Sparrow, Don Quijote says nothing.
             """
             ;
 
             Log.Information("DIALOG START (agents as plugins)");
             Log.Information("******************************");
 
-            await foreach (IChatMessage message in runnerAgent.InvokeAsync(goal))
+            await foreach (IChatMessage message in dialogWriterAgent.InvokeAsync(goal))
             {
                 var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
                 Console.ForegroundColor = ConsoleColor.DarkGray;
@@ -232,35 +231,35 @@ public class PromptsController : ControllerBase
             .WithPlugin(newsPlugin)
             .BuildAsync());
 
-        var quixoteAgent = Track(await new AgentBuilder()
+        var quijoteAgent = Track(await new AgentBuilder()
             .WithOpenAIChatCompletion(Env.Var("OpenAI:ModelId")!, Env.Var("OpenAI:ApiKey")!)
-            .FromTemplatePath(@"Agents/JointAgents.DonQuixoteDialogAgent.yaml")
+            .FromTemplatePath(@"Agents/JointAgents.DonQuijoteDialogAgent.yaml")
             .WithPlugin(newsPlugin)
             .BuildAsync());
 
-        var runnerAgent = Track(await new AgentBuilder()
+        var narratorAgent = Track(await new AgentBuilder()
             .WithOpenAIChatCompletion(Env.Var("OpenAI:ModelId")!, Env.Var("OpenAI:ApiKey")!)
-            .FromTemplatePath(@"Agents/JointAgents.DialogRunnerAgent.yaml")
+            .FromTemplatePath(@"Agents/JointAgents.NarratorAgent.yaml")
             .BuildAsync());
 
         List<string> scriptSteps =
         [
-            "Jack Sparrow, Shakespeare, Don Quixote, and Yoda are having a feast. Don Quixote likes coca-cola! All making remarks about their favorite drinks.",
-            "Jack Sparrow makes a bad joke about Don Quixote's taste in drinks.",
-            "Jack Sparrow gets a threat from Don Quixote and Don Quixote is launching a fake attack.",
+            "Jack Sparrow, Shakespeare, Don Quijote, and Yoda are having a feast. Don Quijote likes coca-cola! All making remarks about their favorite drinks.",
+            "Jack Sparrow makes a bad joke about Don Quijote's taste in drinks.",
+            "Jack Sparrow gets a threat from Don Quijote and Don Quijote is launching a fake attack.",
             "Shakespeare sends strong words to Jack Sparrow but Jack Sparrow answers bravely and provocatively.",
-            "Yoda warns Jack Sparrow, but Jack Sparrow slaps Don Quixote.",
+            "Yoda warns Jack Sparrow, but Jack Sparrow slaps Don Quijote.",
             "Yoda hits Jack Sparrow with an energy blast, resulting in an epic victory.",
-            "Jack Sparrow dies and Don Quixote falls down to his knees weeping for Jack Sparrow.",
-            "Shakespeare, Yoda or Don Quixote responds with 'VICTORY!'",
-            "Yoda tells an epitaph for Jack Sparrow, Don Quixote says nothing.",
+            "Jack Sparrow dies and Don Quijote falls down to his knees weeping for Jack Sparrow.",
+            "Shakespeare, Yoda or Don Quijote responds with 'VICTORY!'",
+            "Yoda tells an epitaph for Jack Sparrow, Don Quijote says nothing.",
         ];
 
         var result = new List<string>();
 
         try
         {
-            thread = await runnerAgent.NewThreadAsync();
+            thread = await narratorAgent.NewThreadAsync();
             Log.Information($"DIALOG START (joint agents, thread id: {thread.Id})");
             Log.Information("****************************************");
 
@@ -304,18 +303,18 @@ public class PromptsController : ControllerBase
                     result.Add($"{message.Role} > Shakespeare > {message.Content}");
                 }
 
-                var quixoteAgentMessages = await thread.InvokeAsync(quixoteAgent).ToArrayAsync();
-                foreach (var message in quixoteAgentMessages)
+                var quijoteAgentMessages = await thread.InvokeAsync(quijoteAgent).ToArrayAsync();
+                foreach (var message in quijoteAgentMessages)
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.Write("    Don Quixote: ");
+                    Console.Write("    Don Quijote: ");
                     var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
                     PrintHelper.PrintLines(lines);
                     Console.ResetColor();
-                    result.Add($"{message.Role} > Don Quixote > {message.Content}");
+                    result.Add($"{message.Role} > Don Quijote > {message.Content}");
                 }
 
-                var runnerMessages = await thread.InvokeAsync(runnerAgent).ToArrayAsync();
+                var runnerMessages = await thread.InvokeAsync(narratorAgent).ToArrayAsync();
                 foreach (var message in runnerMessages)
                 {
                     Console.ForegroundColor = ConsoleColor.Gray;
