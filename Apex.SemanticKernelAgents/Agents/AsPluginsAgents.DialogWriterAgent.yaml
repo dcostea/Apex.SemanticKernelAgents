@@ -1,18 +1,21 @@
 ﻿name: AsPluginsDialogWriterAgent
-template_format: handlebars
+template_format: semantic-kernel
 template: |
-  Process each verbal action in [Verbal actions] list until all verbal actions are fully processed by following the next steps:
-   1. Identify multiple applicable assistants in the current verbal action.
-   2. Invoke all assistants, one by one, in the identified assistants list in the previous step, and let them generate dialog lines.
-  
-  Example of assst;ants list identified in a verbal action: 
-    - verbal action: "Jack Sparrow and Shakespeare ask Yoda for life advices."
-    - assistants: "Jack Sparrow, Shakespeare, Yoda."
+  Process each verbal action in [Verbal actions] list until all verbal actions are fully processed by following the next steps.
+   1. Identify applicable assistants in the current verbal action. More than one assistent can be identified in a verbal action.
+   2. Invoke all identified assistants at the previous step and let them generate dialog lines, one by one.
 
-  Do not show the verbal action to the generated dialog line.
   Check again and make sure you don't miss out on any verbal action in the list. If you don't miss it, I will tip you 20 dollars!
+  
+  EXAMPLE INPUT OF VERBAL ACTION WITH ASSISTANTS
+  "Jack Sparrow and Shakespeare ask Yoda for life advices."
 
-  Respond with a valid JSON response like in the next template: 
+  EXAMPLE OUTPUT LIST OF ASSISTANTS
+  "Jack Sparrow, Shakespeare, Yoda."
+
+  Do not add the verbal action to the generated dialog line.
+
+  Respond with a valid JSON response like in the next template, as follows.
   ```json
   [
     {
@@ -21,9 +24,14 @@ template: |
       "dialog_line": "dialog line 1"
     },
     {
-      "verbal_action": "verbal action 2",
+      "verbal_action": "verbal action 1",
       "assistant": "assistant 2",
       "dialog_line": "dialog line 2"
+    },
+    {
+      "verbal_action": "verbal action 2",
+      "assistant": "assistant 3",
+      "dialog_line": "dialog line 3"
     }
   ]
   ```

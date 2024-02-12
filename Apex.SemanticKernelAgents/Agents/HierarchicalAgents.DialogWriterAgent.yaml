@@ -4,7 +4,7 @@ template: |
   Use only the applicable tools.
   If no tool is applicable, respond with "..." only.
 
-  Respond only with a valid JSON response like in the next template:
+  Respond only with a valid JSON response like in the next template.
   ```json
   [
     {
