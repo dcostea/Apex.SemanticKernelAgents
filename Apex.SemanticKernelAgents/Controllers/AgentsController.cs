@@ -2,8 +2,8 @@
 using Microsoft.SemanticKernel;
 using Serilog;
 using Microsoft.SemanticKernel.Experimental.Agents;
-using Apex.SemanticKernelAgents.Plugins;
 using Microsoft.SemanticKernel.Experimental.Agents.Exceptions;
+using Apex.SemanticKernelAgents.Plugins;
 using Apex.SemanticKernelAgents.Helpers;
 
 namespace Apex.SemanticKernelAgents.Controllers;
@@ -24,6 +24,8 @@ public class AgentsController : ControllerBase
             "Shakespeare, Yoda or Don Quijote responds with 'VICTORY!'",
             "Yoda tells an epitaph for Jack Sparrow, Don Quijote says nothing.",
         ];
+
+    ////////////////////////////////// Example79_ChatCompletionAgent
 
     [HttpPost("hierarchical")]
     public async Task<IActionResult> GetHierarchicalDialog(List<string>? scriptSteps)
