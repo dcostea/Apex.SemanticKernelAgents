@@ -1,3 +1,4 @@
+using Microsoft.SemanticKernel;
 using Serilog;
 
 namespace Apex.SemanticKernelAgents;
@@ -10,24 +11,31 @@ public class Program
         builder.Logging.ClearProviders();
 
         Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            //.MinimumLevel.Information()
-            .MinimumLevel.Override("Microsoft.SemanticKernel", Serilog.Events.LogEventLevel.Debug)
-            //.MinimumLevel.Override("Microsoft.SemanticKernel", Serilog.Events.LogEventLevel.Warning)
+            //.MinimumLevel.Debug()
+            .MinimumLevel.Information()
+            .MinimumLevel.Override("Microsoft.SemanticKernel", Serilog.Events.LogEventLevel.Warning)
             .WriteTo.Console()
             .CreateLogger();
 
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
-        
-        //var kernel = builder.Services.AddKernel();
-        //builder.Services.AddAzureOpenAIChatCompletion(
-        //    deploymentName: Env.Var("AzureOpenAI:ChatCompletionDeploymentName")!,
-        //    modelId: Env.Var("AzureOpenAI:TextCompletionModelId")!,
-        //    endpoint: Env.Var("AzureOpenAI:Endpoint")!,
-        //    serviceId: Env.Var("AzureOpenAI:AzureOpenAIChat")!,
-        //    apiKey: Env.Var("AzureOpenAI:ApiKey")!);
+
+        var kernel = builder.Services.AddKernel();
+
+        builder.Services.AddAzureOpenAIChatCompletion(
+            deploymentName: Env.Var("AzureOpenAI:ChatCompletionDeploymentName")!,
+            endpoint: Env.Var("AzureOpenAI:Endpoint")!,
+            apiKey: Env.Var("AzureOpenAI:ApiKey")!);
+
+        builder.Services.AddAzureOpenAIFiles(
+            endpoint: Env.Var("AzureOpenAI:Endpoint")!,
+            apiKey: Env.Var("AzureOpenAI:ApiKey")!);
+
+        builder.Services.AddAzureOpenAITextToAudio(
+            deploymentName: Env.Var("AzureOpenAI:TextToSoundDeploymentName")!,
+            endpoint: Env.Var("AzureOpenAI:Endpoint2")!,
+            apiKey: Env.Var("AzureOpenAI:ApiKey2")!);
 
         var app = builder.Build();
 

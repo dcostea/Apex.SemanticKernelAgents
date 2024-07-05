@@ -5,19 +5,13 @@ template: |
   Carefully analyse the messages and use only the applicable tools.
   If no tool is applicable, respond with "..." only.
 
-  Respond only with a valid JSON response like in the next template.
-  ```json
+  Respond in JSON format. The JSON schema can include only:
   [
     {
-      "assistant": "assistant 1",
-      "dialog_line": "dialog line 1"
-    },
-    {
-      "assistant": "assistant 2",
-      "dialog_line": "dialog line 2"
+      "assistant": "string (the assistant which responds)",
+      "dialog_line": "string (the response of the assistant)"
     }
   ]
-  ```
 description: Determines if a tool can be utilized to achieve a result.
 execution_settings:
   default:

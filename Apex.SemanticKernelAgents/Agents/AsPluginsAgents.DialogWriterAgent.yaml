@@ -17,26 +17,14 @@ template: |
 
   Do not add the verbal action to the generated dialog line.
 
-  Respond with a valid JSON response like in the next template, as follows.
-  ```json
+  Respond in JSON format. The JSON schema can include only:
   [
     {
-      "verbal_action": "verbal action 1",
-      "assistant": "assistant 1",
-      "dialog_line": "dialog line 1"
-    },
-    {
-      "verbal_action": "verbal action 1",
-      "assistant": "assistant 2",
-      "dialog_line": "dialog line 2"
-    },
-    {
-      "verbal_action": "verbal action 2",
-      "assistant": "assistant 3",
-      "dialog_line": "dialog line 3"
+      "verbal_action": "string (the verbal action to respond to)",
+      "assistant": "string (the assistant which responds)",
+      "dialog_line": "string (the response of the assistant)"
     }
   ]
-  ```
 description: A chat bot that generates dialog lines using the applicable assistants.
 execution_settings:
   default:

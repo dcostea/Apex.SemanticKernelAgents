@@ -5,35 +5,46 @@ using Microsoft.SemanticKernel.Experimental.Agents;
 using Microsoft.SemanticKernel.Experimental.Agents.Exceptions;
 using Apex.SemanticKernelAgents.Plugins;
 using Apex.SemanticKernelAgents.Helpers;
+using Microsoft.SemanticKernel.Agents;
+using Microsoft.SemanticKernel.Agents.Chat;
+using Microsoft.SemanticKernel.Agents.OpenAI;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
+using System.Threading;
 
 namespace Apex.SemanticKernelAgents.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class AgentsController : ControllerBase
+public class AgentsLegacyController : ControllerBase
 {
-    private readonly List<string> ScriptSteps =
-        [
-            "Jack Sparrow, Shakespeare, Don Quijote, and Yoda are having a feast. Don Quijote likes coca-cola! All making remarks about their favorite drinks.",
-            "Jack Sparrow makes a bad joke about Don Quijote's taste in drinks.",
-            "Jack Sparrow gets a threat from Don Quijote and Don Quijote is launching a fake attack.",
-            "Shakespeare sends strong words to Jack Sparrow but Jack Sparrow answers bravely and provocatively.",
-            "Yoda warns Jack Sparrow, but Jack Sparrow slaps Don Quijote.",
-            "Yoda hurts Jack Sparrow with an energy blast, resulting in an epic victory.",
-            "Jack Sparrow dies and Don Quijote falls down to his knees weeping for Jack Sparrow.",
-            "Shakespeare, Yoda or Don Quijote responds with 'VICTORY!'",
-            "Yoda tells an epitaph for Jack Sparrow, Don Quijote says nothing.",
-        ];
+    private readonly IServiceProvider _sp;
 
-    ////////////////////////////////// Example79_ChatCompletionAgent
+    private readonly List<string> ScriptLines =
+    [
+        "Jack Sparrow, Shakespeare, Don Quijote, and Yoda are having a feast. Don Quijote likes coca-cola! All making remarks about their favorite drinks.",
+        "Jack Sparrow makes a bad joke about Don Quijote's taste in drinks.",
+        "Jack Sparrow gets a threat from Don Quijote and Don Quijote is launching a fake attack.",
+        "Shakespeare sends strong words to Jack Sparrow but Jack Sparrow answers bravely and provocatively.",
+        "Yoda warns Jack Sparrow, but Jack Sparrow slaps Don Quijote.",
+        "Yoda hurts Jack Sparrow with an energy blast, resulting in an epic victory.",
+        "Jack Sparrow dies and Don Quijote falls down to his knees weeping for Jack Sparrow.",
+        "Shakespeare, Yoda or Don Quijote responds with 'VICTORY!'",
+        "Yoda tells an epitaph for Jack Sparrow, Don Quijote says nothing.",
+    ];
 
-    [HttpPost("hierarchical")]
-    public async Task<IActionResult> GetHierarchicalDialog(List<string>? scriptSteps)
+    public AgentsLegacyController(IServiceProvider sp)
+    {
+        _sp = sp;
+    }
+
+    [HttpPost("/legacy/hierarchical")]
+    public async Task<IActionResult> GetHierarchicalDialog(List<string>? scriptLines)
     {
         List<IAgent> agents = [];
         IAgentThread? thread = null;
+        IReadOnlyList<IChatMessage> history = [];
 
-        var newsPlugin = KernelPluginFactory.CreateFromType<AlertsPlugin>();
+        var newsPlugin = KernelPluginFactory.CreateFromType<AlertsPlugin>(serviceProvider: _sp);
 
         var jackAgent = Track(await new AgentBuilder()
             //.WithOpenAIChatCompletion(Env.Var("OpenAI:ModelId")!, Env.Var("OpenAI:ApiKey")!)
@@ -73,12 +84,10 @@ public class AgentsController : ControllerBase
             .WithPlugin(quijoteAgent.AsPlugin())
             .BuildAsync());
 
-        scriptSteps ??= ScriptSteps;
-        scriptSteps = scriptSteps!.First().Equals("string")
-            ? ScriptSteps
-            : scriptSteps;
-
-        var result = new List<string>();
+        scriptLines ??= ScriptLines;
+        scriptLines = scriptLines!.First().Equals("string")
+            ? ScriptLines
+            : scriptLines;
 
         try
         {
@@ -86,31 +95,30 @@ public class AgentsController : ControllerBase
             Log.Information($"DIALOG START (hierarchical agents, thread id: {thread.Id})");
             Log.Information("****************************************");
 
-            foreach (var messages in scriptSteps.Select(m => thread!.InvokeAsync(dialogWriterAgent, m)))
+            foreach (var messages in scriptLines.Select(m => thread!.InvokeAsync(dialogWriterAgent, m)))
             {
                 await foreach (var message in messages)
                 {
                     PrintHelper.PrintMessage(message!);
-                    result.Add($"{message.Role} > {message.Content}");
                 }
             }
 
-            string? step;
+            string? scriptLine;
             do
             {
                 Console.WriteLine("Enter a script line (or just hit Enter to quit):");
-                step = Console.ReadLine();
-                if (step is not null)
+                scriptLine = Console.ReadLine();
+                if (scriptLine is not null)
                 {
-                    var msgs = thread!.InvokeAsync(dialogWriterAgent, step!);
-                    await foreach (var message in msgs)
+                    var messages = thread!.InvokeAsync(dialogWriterAgent, scriptLine!);
+
+                    await foreach (var message in messages)
                     {
                         PrintHelper.PrintMessage(message!);
-                        result.Add($"{message.Role} > {message.Content}");
                     }
                 }
             } 
-            while (!string.IsNullOrEmpty(step));
+            while (!string.IsNullOrEmpty(scriptLine));
         }
         catch (AgentException ex)
         {
@@ -126,6 +134,8 @@ public class AgentsController : ControllerBase
         }
         finally
         {
+            history = await thread!.GetMessagesAsync();
+
             await Task.WhenAll(
                 thread?.DeleteAsync() ?? Task.CompletedTask,
                 Task.WhenAll(agents.Select(a => a.DeleteAsync())));
@@ -134,7 +144,7 @@ public class AgentsController : ControllerBase
             Log.Information("*******************************");
         }
 
-        return Ok(result);
+        return Ok(history);
 
         IAgent Track(IAgent agent)
         {
@@ -144,12 +154,13 @@ public class AgentsController : ControllerBase
         }
     }
 
-    [HttpPost("single")]
+    [HttpPost("/legacy/single")]
     public async Task<IActionResult> GetSingleAgent()
     {
         List<IAgent> agents = [];
+        IList<IChatMessage> history = [];
 
-        var newsPlugin = KernelPluginFactory.CreateFromType<AlertsPlugin>();
+        var newsPlugin = KernelPluginFactory.CreateFromType<AlertsPlugin>(serviceProvider: _sp);
 
         try
         {
@@ -184,6 +195,7 @@ public class AgentsController : ControllerBase
                 Console.WriteLine($"{message.Role} [{message.Id}] [{message.AgentId}] >");
                 Console.ResetColor();
                 PrintHelper.PrintColoredLines(lines);
+                history.Add(message);
             }
         }
         catch (AgentException ex)
@@ -202,7 +214,7 @@ public class AgentsController : ControllerBase
             Log.Information("************************************");
         }
 
-        return Ok();
+        return Ok(history);
 
         IAgent Track(IAgent agent)
         {
@@ -212,12 +224,87 @@ public class AgentsController : ControllerBase
         }
     }
 
-    [HttpPost("plugin")]
+    [HttpPost("/legacy/single/thread")]
+    public async Task<IActionResult> GetSingleAgentWithThread()
+    {
+        List<IAgent> agents = [];
+        IList<IChatMessage> history = [];
+
+        var newsPlugin = KernelPluginFactory.CreateFromType<AlertsPlugin>(serviceProvider: _sp);
+
+        try
+        {
+            var jackAgent = Track(await new AgentBuilder()
+                //.WithOpenAIChatCompletion(Env.Var("OpenAI:ModelId")!, Env.Var("OpenAI:ApiKey")!)
+                .WithAzureOpenAIChatCompletion(Env.Var("AzureOpenAI:Endpoint")!, Env.Var("AzureOpenAI:ChatCompletionDeploymentName")!, Env.Var("AzureOpenAI:ApiKey")!)
+                .FromTemplatePath(@"Agents/AsPluginsAgents.JackSparrowDialogAgent.yaml")
+                .WithPlugin(newsPlugin)
+                .BuildAsync());
+
+            var goal = """
+            [Verbal actions]
+            Jack Sparrow, Shakespeare, Don Quijote, and Yoda are having a feast. Don Quijote likes coca-cola! All making remarks about their favorite drinks.
+            Jack Sparrow makes a bad joke about Don Quijote's taste in drinks.
+            Jack Sparrow gets a threat from Don Quijote and Don Quijote is launching a fake attack.
+            Shakespeare sends strong words to Jack Sparrow but Jack Sparrow answers bravely and provocatively.
+            Yoda warns Jack Sparrow, but Jack Sparrow slaps Don Quijote.
+            Yoda hurts Jack Sparrow with an energy blast, resulting in an epic victory.
+            Jack Sparrow dies and Don Quijote falls down to his knees weeping for Jack Sparrow.
+            Shakespeare, Yoda or Don Quijote responds with 'VICTORY!'
+            Yoda tells an epitaph for Jack Sparrow, Don Quijote says nothing.
+            """
+            ;
+
+            Log.Information("DIALOG START (single agent)");
+            Log.Information("******************************");
+
+            var thread = await jackAgent.NewThreadAsync();
+
+            //await foreach (var message in jackAgent.InvokeAsync(goal))
+            //await foreach (var message in thread.InvokeAsync(jackAgent))
+            await foreach (var message in thread.InvokeAsync(jackAgent, goal))
+            {
+                var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"{message.Role} [{message.Id}] [{message.AgentId}] >");
+                Console.ResetColor();
+                PrintHelper.PrintColoredLines(lines);
+                history.Add(message);
+            }
+        }
+        catch (AgentException ex)
+        {
+            Log.Error("Agent Exception: {message}.", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Exception: {message}. InnerException: {innerException}", ex.Message, ex.InnerException?.Message);
+        }
+        finally
+        {
+            await Task.WhenAll(agents.Select(a => a.DeleteAsync()));
+
+            Log.Information("DIALOG IS COMPLETE (single agent)");
+            Log.Information("************************************");
+        }
+
+        return Ok(history);
+
+        IAgent Track(IAgent agent)
+        {
+            agents.Add(agent);
+
+            return agent;
+        }
+    }
+
+    [HttpPost("/legacy/plugin")]
     public async Task<IActionResult> GetSingleAgentWithAgentAsPluginDialog()
     {
         List<IAgent> agents = [];
+        IList<IChatMessage> history = [];
 
-        var newsPlugin = KernelPluginFactory.CreateFromType<AlertsPlugin>();
+        var newsPlugin = KernelPluginFactory.CreateFromType<AlertsPlugin>(serviceProvider: _sp);
 
         try
         {
@@ -258,6 +345,7 @@ public class AgentsController : ControllerBase
                 Console.WriteLine($"{message.Role} [{message.Id}] [{message.AgentId}] >");
                 Console.ResetColor();
                 PrintHelper.PrintColoredLines(lines);
+                history.Add(message);
             }
         }
         catch (AgentException ex)
@@ -276,7 +364,7 @@ public class AgentsController : ControllerBase
             Log.Information("************************************");
         }
 
-        return Ok();
+        return Ok(history);
 
         IAgent Track(IAgent agent)
         {
@@ -286,12 +374,13 @@ public class AgentsController : ControllerBase
         }
     }
 
-    [HttpPost("plugins")]
+    [HttpPost("/legacy/plugins")]
     public async Task<IActionResult> GetSingleAgentWithAgentsAsPluginsDialog()
     {
         List<IAgent> agents = [];
+        IList<IChatMessage> history = [];
 
-        var newsPlugin = KernelPluginFactory.CreateFromType<AlertsPlugin>();
+        var newsPlugin = KernelPluginFactory.CreateFromType<AlertsPlugin>(serviceProvider: _sp);
 
         try
         {
@@ -356,6 +445,7 @@ public class AgentsController : ControllerBase
                 Console.WriteLine($"{message.Role} [{message.Id}] [{message.AgentId}] >");
                 Console.ResetColor();
                 PrintHelper.PrintColoredLines(lines);
+                history.Add(message);
             }
         }
         catch (AgentException ex)
@@ -374,7 +464,7 @@ public class AgentsController : ControllerBase
             Log.Information("************************************");
         }
 
-        return Ok();
+        return Ok(history);
 
         IAgent Track(IAgent agent)
         {
@@ -384,13 +474,14 @@ public class AgentsController : ControllerBase
         }
     }
 
-    [HttpPost("joint/for")]
-    public async Task<IActionResult> GetJointDialogWithForLoop(List<string>? scriptSteps)
+    [HttpPost("/legacy/joint/for")]
+    public async Task<IActionResult> GetJointDialogWithForLoop(List<string>? scriptLines)
     {
         List<IAgent> agents = [];
         IAgentThread? thread = null;
+        IReadOnlyList<IChatMessage> history = [];
 
-        var newsPlugin = KernelPluginFactory.CreateFromType<AlertsPlugin>();
+        var newsPlugin = KernelPluginFactory.CreateFromType<AlertsPlugin>(serviceProvider: _sp);
 
         var jackAgent = Track(await new AgentBuilder()
             //.WithOpenAIChatCompletion(Env.Var("OpenAI:ModelId")!, Env.Var("OpenAI:ApiKey")!)
@@ -426,12 +517,10 @@ public class AgentsController : ControllerBase
             .FromTemplatePath(@"Agents/JointAgents.NarratorAgent.yaml")
             .BuildAsync());
 
-        scriptSteps ??= ScriptSteps;
-        scriptSteps = scriptSteps!.First().Equals("string")
-            ? ScriptSteps
-            : scriptSteps;
-
-        var result = new List<string>();
+        scriptLines ??= ScriptLines;
+        scriptLines = scriptLines!.First().Equals("string")
+            ? ScriptLines
+            : scriptLines;
 
         try
         {
@@ -439,9 +528,9 @@ public class AgentsController : ControllerBase
             Log.Information($"DIALOG START (joint agents - for, thread id: {thread.Id})");
             Log.Information("****************************************");
 
-            foreach (var scriptStep in scriptSteps)
+            foreach (var scriptLine in scriptLines)
             {
-                var messageUser = await thread.AddUserMessageAsync(scriptStep);
+                var messageUser = await thread.AddUserMessageAsync(scriptLine);
                 Console.ForegroundColor = ConsoleColor.DarkGray;
                 Console.WriteLine($"[SCRIPT: {messageUser.Content}]");
                 Console.ResetColor();
@@ -454,7 +543,6 @@ public class AgentsController : ControllerBase
                     var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
                     PrintHelper.PrintLines(lines);
                     Console.ResetColor();
-                    result.Add($"{message.Role} > Jack Sparrow > {message.Content}");
                 }
 
                 var yodaAgentMessages = await thread.InvokeAsync(yodaAgent).ToArrayAsync();
@@ -465,7 +553,6 @@ public class AgentsController : ControllerBase
                     var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
                     PrintHelper.PrintLines(lines);
                     Console.ResetColor();
-                    result.Add($"{message.Role} > Yoda > {message.Content}");
                 }
 
                 var shakespeareAgentMessages = await thread.InvokeAsync(shakespeareAgent).ToArrayAsync();
@@ -476,7 +563,6 @@ public class AgentsController : ControllerBase
                     var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
                     PrintHelper.PrintLines(lines);
                     Console.ResetColor();
-                    result.Add($"{message.Role} > Shakespeare > {message.Content}");
                 }
 
                 var quijoteAgentMessages = await thread.InvokeAsync(quijoteAgent).ToArrayAsync();
@@ -487,7 +573,6 @@ public class AgentsController : ControllerBase
                     var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
                     PrintHelper.PrintLines(lines);
                     Console.ResetColor();
-                    result.Add($"{message.Role} > Don Quijote > {message.Content}");
                 }
 
                 var narratorMessages = await thread.InvokeAsync(narratorAgent).ToArrayAsync();
@@ -498,7 +583,6 @@ public class AgentsController : ControllerBase
                     var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
                     PrintHelper.PrintLines(lines);
                     Console.ResetColor();
-                    result.Add($"{message.Role} > Narrator > {message.Content}");
                 }
             }
         }
@@ -512,6 +596,8 @@ public class AgentsController : ControllerBase
         }
         finally
         {
+            history = await thread!.GetMessagesAsync();
+
             await Task.WhenAll(
                 thread?.DeleteAsync() ?? Task.CompletedTask,
                 Task.WhenAll(agents.Select(a => a.DeleteAsync())));
@@ -520,7 +606,7 @@ public class AgentsController : ControllerBase
             Log.Information("************************");
         }
 
-        return Ok(result);
+        return Ok(history);
 
         IAgent Track(IAgent agent)
         {
@@ -530,13 +616,14 @@ public class AgentsController : ControllerBase
         }
     }
 
-    [HttpPost("joint/dowhile")]
+    [HttpPost("/legacy/joint/dowhile")]
     public async Task<IActionResult> GetJointDialogWithDoWhileLoop(string? initialMessage = null)
     {
         List<IAgent> agents = [];
         IAgentThread? thread = null;
+        IReadOnlyList<IChatMessage> history = [];
 
-        var newsPlugin = KernelPluginFactory.CreateFromType<AlertsPlugin>();
+        var newsPlugin = KernelPluginFactory.CreateFromType<AlertsPlugin>(serviceProvider: _sp);
 
         var jackAgent = Track(await new AgentBuilder()
             //.WithOpenAIChatCompletion(Env.Var("OpenAI:ModelId")!, Env.Var("OpenAI:ApiKey")!)
@@ -569,8 +656,6 @@ public class AgentsController : ControllerBase
             .WithPlugin(newsPlugin)
             .BuildAsync());
 
-        var result = new List<string>();
-
         try
         {
             thread = await moderatorAgent.NewThreadAsync();
@@ -600,7 +685,6 @@ public class AgentsController : ControllerBase
                     var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
                     PrintHelper.PrintLines(lines);
                     Console.ResetColor();
-                    result.Add($"{message.Role} > Jack Sparrow > {message.Content}");
                 }
 
                 var yodaAgentMessages = await thread.InvokeAsync(yodaAgent).ToArrayAsync();
@@ -611,7 +695,6 @@ public class AgentsController : ControllerBase
                     var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
                     PrintHelper.PrintLines(lines);
                     Console.ResetColor();
-                    result.Add($"{message.Role} > Yoda > {message.Content}");
                 }
 
                 var shakespeareAgentMessages = await thread.InvokeAsync(shakespeareAgent).ToArrayAsync();
@@ -622,7 +705,6 @@ public class AgentsController : ControllerBase
                     var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
                     PrintHelper.PrintLines(lines);
                     Console.ResetColor();
-                    result.Add($"{message.Role} > Shakespeare > {message.Content}");
                 }
 
                 var quijoteAgentMessages = await thread.InvokeAsync(quijoteAgent).ToArrayAsync();
@@ -633,7 +715,6 @@ public class AgentsController : ControllerBase
                     var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
                     PrintHelper.PrintLines(lines);
                     Console.ResetColor();
-                    result.Add($"{message.Role} > Don Quijote > {message.Content}");
                 }
 
                 var moderatorMessages = await thread.InvokeAsync(moderatorAgent).ToArrayAsync();
@@ -644,7 +725,6 @@ public class AgentsController : ControllerBase
                     var lines = message.Content.Split('\n', '.', StringSplitOptions.RemoveEmptyEntries);
                     PrintHelper.PrintLines(lines);
                     Console.ResetColor();
-                    result.Add($"{message.Role} > Moderator > {message.Content}");
                     if (!string.IsNullOrWhiteSpace(message.Content) && message.Content.Contains("CHEERS", StringComparison.OrdinalIgnoreCase))
                     {
                         shouldContinue = false;
@@ -663,6 +743,8 @@ public class AgentsController : ControllerBase
         }
         finally
         {
+            history = await thread!.GetMessagesAsync();
+
             await Task.WhenAll(
                 thread?.DeleteAsync() ?? Task.CompletedTask,
                 Task.WhenAll(agents.Select(a => a.DeleteAsync())));
@@ -671,7 +753,7 @@ public class AgentsController : ControllerBase
             Log.Information("************************");
         }
 
-        return Ok(result);
+        return Ok(history);
 
         IAgent Track(IAgent agent)
         {
