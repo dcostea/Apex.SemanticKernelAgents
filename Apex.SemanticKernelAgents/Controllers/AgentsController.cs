@@ -9,17 +9,15 @@ using Serilog;
 using Apex.SemanticKernelAgents.Helpers;
 using System.Text;
 using Apex.SemanticKernelAgents.Strategies;
-using Azure.AI.OpenAI;
 
 namespace Apex.SemanticKernelAgents.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class AgentsNextController : ControllerBase
+public class AgentsController : ControllerBase
 {
     private readonly Kernel _kernel;
     private readonly ILoggerFactory _loggerFactory;
-    private readonly IServiceProvider _sp;
 
     private readonly List<string> ScriptLines =
      [
@@ -34,23 +32,22 @@ public class AgentsNextController : ControllerBase
         "Yoda tells an epitaph for Jack Sparrow, Don Quijote says nothing.",
     ];
 
-    public AgentsNextController(Kernel kernel, IServiceProvider sp)
+    public AgentsController(Kernel kernel)
     {
         _kernel = kernel;
         _loggerFactory = LoggerFactory.Create(builder => builder.AddSerilog(Log.Logger));
-        _sp = sp;
     }
 
-    [HttpPost("/next/single")]
+    [HttpPost("/single")]
     public async Task<IActionResult> SingularAgent()
     {
         // add some plugins to the kernel
-        _kernel.Plugins.AddFromType<AlertsPlugin>(serviceProvider: _sp);
+        _kernel.ImportPluginFromType<AlertsPlugin>();
 
         // create a chat agent for Jack Sparrow using existing kernel (along with its plugins)
         ChatCompletionAgent jackSparrowAgent = new() 
-        { 
-            ExecutionSettings = new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions },
+        {
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
             Instructions = """
                 You are Jack Sparrow talking in Jack Sparrow style.
@@ -91,14 +88,14 @@ public class AgentsNextController : ControllerBase
         return Ok(response.ToString());
     }
 
-    [HttpPost("/next/strategy/terminator/aggregator")]
+    [HttpPost("/strategy/terminator/aggregator")]
     public async Task<IActionResult> AgentWithAggregatorTerminationStrategy()
     {
-        _kernel.Plugins.AddFromType<AlertsPlugin>(serviceProvider: _sp);
+        _kernel.ImportPluginFromType<AlertsPlugin>();
 
         ChatCompletionAgent jackSparrowAgent = new()
         {
-            ExecutionSettings = new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions },
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
             Instructions = """
             You are Jack Sparrow talking in Jack Sparrow style.
@@ -112,7 +109,7 @@ public class AgentsNextController : ControllerBase
 
         ChatCompletionAgent yodaAgent = new()
         {
-            ExecutionSettings = new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions },
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
             Instructions = """
                 You are Yoda talking in Yoda style.
@@ -169,14 +166,14 @@ public class AgentsNextController : ControllerBase
         return Ok(response);
     }
 
-    [HttpPost("/next/strategy/terminator/threshold")]
+    [HttpPost("/strategy/terminator/threshold")]
     public async Task<IActionResult> AgentWithThresholdTerminationStrategy()
     {
-        _kernel.Plugins.AddFromType<AlertsPlugin>(serviceProvider: _sp);
+        _kernel.ImportPluginFromType<AlertsPlugin>();
 
         ChatCompletionAgent jackSparrowAgent = new()
         {
-            ExecutionSettings = new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions },
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
             Instructions = """
             You are Jack Sparrow talking in Jack Sparrow style.
@@ -190,7 +187,7 @@ public class AgentsNextController : ControllerBase
 
         ChatCompletionAgent yodaAgent = new()
         {
-            ExecutionSettings = new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions },
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
             Instructions = """
                 You are Yoda talking in Yoda style.
@@ -239,14 +236,14 @@ public class AgentsNextController : ControllerBase
         return Ok(response);
     }
 
-    [HttpPost("/next/strategy/terminator/matching")]
+    [HttpPost("/strategy/terminator/matching")]
     public async Task<IActionResult> AgentWithMatchingTerminationStrategy()
     {
-        _kernel.Plugins.AddFromType<AlertsPlugin>(serviceProvider: _sp);
+        _kernel.ImportPluginFromType<AlertsPlugin>();
 
         ChatCompletionAgent jackSparrowAgent = new()
         {
-            ExecutionSettings = new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions },
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
             Instructions = """
             You are Jack Sparrow talking in Jack Sparrow style.
@@ -260,7 +257,7 @@ public class AgentsNextController : ControllerBase
 
         ChatCompletionAgent yodaAgent = new()
         {
-            ExecutionSettings = new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions },
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
             Instructions = """
                 You are Yoda talking in Yoda style.
@@ -278,7 +275,7 @@ public class AgentsNextController : ControllerBase
             History:
             {{$history}}
             """,
-            new OpenAIPromptExecutionSettings { ResponseFormat = ChatCompletionsResponseFormat.JsonObject },
+            new OpenAIPromptExecutionSettings { ResponseFormat = "json_object" },
             description: "Determines if the copy has been approved.",
             functionName: "semantic_copy_approved",
             loggerFactory: _loggerFactory
@@ -298,7 +295,7 @@ public class AgentsNextController : ControllerBase
             History:
             {{$history}}
             """,
-            new OpenAIPromptExecutionSettings { ResponseFormat = ChatCompletionsResponseFormat.JsonObject },
+            new OpenAIPromptExecutionSettings { ResponseFormat = "json_object" },
             description: "Selects randomly the next participant in a conversation.",
             functionName: "random_semantic_selection",
             loggerFactory: _loggerFactory
@@ -314,7 +311,7 @@ public class AgentsNextController : ControllerBase
             description: "Randomly selects 0 or 1.",
             loggerFactory: _loggerFactory
         );
-        //_kernel.Plugins.AddFromFunctions("rnd", [randomMathSelectionFunction]);
+        //_kernel.ImportPluginFromFunctions("rnd", [randomMathSelectionFunction]);
 
         AgentGroupChat chat = new(jackSparrowAgent, yodaAgent)
         {
@@ -375,13 +372,13 @@ public class AgentsNextController : ControllerBase
     }
 
     //AggregatorAgent
-    [HttpPost("/next/hierachical")]
+    [HttpPost("/hierachical")]
     public async Task<IActionResult> HierarchicalAgents()
     {
          // create a chat agent for Jack Sparrow using existing kernel (along with its plugins)
         ChatCompletionAgent jackSparrowAgent = new()
         {
-            ExecutionSettings = new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions },
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
             Instructions = """
                 You are Jack Sparrow talking in Jack Sparrow style.
@@ -395,7 +392,7 @@ public class AgentsNextController : ControllerBase
 
         ChatCompletionAgent yodaAgent = new()
         {
-            ExecutionSettings = new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions },
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
             Instructions = """
                 You are Yoda talking in Yoda style.
@@ -409,7 +406,7 @@ public class AgentsNextController : ControllerBase
 
         ChatCompletionAgent shakespeareAgent = new()
         {
-            ExecutionSettings = new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions },
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
             Instructions = """
                 You are Shakespeare talking in Shakespeare style.
@@ -423,7 +420,7 @@ public class AgentsNextController : ControllerBase
 
         ChatCompletionAgent donQuijoteAgent = new()
         {
-            ExecutionSettings = new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions },
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
             Instructions = """
                 You are Don Quijote talking in Don Quijote style.
@@ -463,7 +460,7 @@ public class AgentsNextController : ControllerBase
 
         ChatCompletionAgent dialogWriterAgent = new()
         {
-            ExecutionSettings = new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions },
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
             Instructions = """
                 You are an expert playwright specialized in drama and comedy. 

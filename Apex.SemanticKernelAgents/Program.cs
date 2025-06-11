@@ -1,54 +1,51 @@
 using Microsoft.SemanticKernel;
 using Serilog;
 
-namespace Apex.SemanticKernelAgents;
+var builder = WebApplication.CreateBuilder(args);
+builder.Logging.ClearProviders();
 
-public class Program
+Log.Logger = new LoggerConfiguration()
+    //.MinimumLevel.Debug()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.SemanticKernel", Serilog.Events.LogEventLevel.Warning)
+    .WriteTo.Console()
+    .CreateLogger();
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+var kernel = builder.Services.AddKernel();
+
+var configuration = new ConfigurationBuilder().AddUserSecrets<Program>().Build();
+
+builder.Services.AddAzureOpenAIChatCompletion(
+    deploymentName: configuration["AzureOpenAI:DeploymentName"]!,
+    endpoint: configuration["AzureOpenAI:Endpoint"]!,
+    apiKey: configuration["AzureOpenAI:ApiKey"]!);
+//builder.Services.AddOpenAIChatCompletion(
+//    modelId: configuration["OpenAI:ModelId"]!,
+//    apiKey: configuration["OpenAI:ApiKey"]!);
+
+////builder.Services.AddOpenAIFiles(
+////    //endpoint: Env.Var("AzureOpenAI:Endpoint")!,
+////    apiKey: configuration["AzureOpenAI:ApiKey"]!);
+
+builder.Services.AddAzureOpenAITextToAudio(
+    deploymentName: configuration["AzureOpenAI:TextToSoundDeploymentName"]!,
+    endpoint: configuration["AzureOpenAI:Endpoint2"]!,
+    apiKey: configuration["AzureOpenAI:ApiKey2"]!);
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
 {
-    public static void Main(string[] args)
-    {
-        var builder = WebApplication.CreateBuilder(args);
-        builder.Logging.ClearProviders();
-
-        Log.Logger = new LoggerConfiguration()
-            //.MinimumLevel.Debug()
-            .MinimumLevel.Information()
-            .MinimumLevel.Override("Microsoft.SemanticKernel", Serilog.Events.LogEventLevel.Warning)
-            .WriteTo.Console()
-            .CreateLogger();
-
-        builder.Services.AddControllers();
-        builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen();
-
-        var kernel = builder.Services.AddKernel();
-
-        builder.Services.AddAzureOpenAIChatCompletion(
-            deploymentName: Env.Var("AzureOpenAI:ChatCompletionDeploymentName")!,
-            endpoint: Env.Var("AzureOpenAI:Endpoint")!,
-            apiKey: Env.Var("AzureOpenAI:ApiKey")!);
-
-        builder.Services.AddAzureOpenAIFiles(
-            endpoint: Env.Var("AzureOpenAI:Endpoint")!,
-            apiKey: Env.Var("AzureOpenAI:ApiKey")!);
-
-        builder.Services.AddAzureOpenAITextToAudio(
-            deploymentName: Env.Var("AzureOpenAI:TextToSoundDeploymentName")!,
-            endpoint: Env.Var("AzureOpenAI:Endpoint2")!,
-            apiKey: Env.Var("AzureOpenAI:ApiKey2")!);
-
-        var app = builder.Build();
-
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-        }
-
-        app.UseHttpsRedirection();
-
-        app.MapControllers();
-
-        app.Run();
-    }
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
+
+app.UseHttpsRedirection();
+
+app.MapControllers();
+
+app.Run();
