@@ -1,20 +1,20 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Apex.SemanticKernelAgents.Helpers;
+using Apex.SemanticKernelAgents.Plugins;
+using Apex.SemanticKernelAgents.Strategies;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.Agents.Chat;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Apex.SemanticKernelAgents.Plugins;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Serilog;
-using Apex.SemanticKernelAgents.Helpers;
 using System.Text;
-using Apex.SemanticKernelAgents.Strategies;
 
 namespace Apex.SemanticKernelAgents.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class AgentsController : ControllerBase
+public class AgentsCollaborationController : ControllerBase
 {
     private readonly Kernel _kernel;
     private readonly ILoggerFactory _loggerFactory;
@@ -32,93 +32,86 @@ public class AgentsController : ControllerBase
         "Yoda tells an epitaph for Jack Sparrow, Don Quijote says nothing.",
     ];
 
-    public AgentsController(Kernel kernel)
+    private readonly string InstructionsTemplate = """
+        You are {{name}} talking in {{name}} style.
+        Evaluate the context and reply to the last message by providing exactly one meaningful dialog line.
+        The dialog line must be only one sentence of maximum {{words_number}} words.
+        """;
+
+    public AgentsCollaborationController(Kernel kernel)
     {
-        _kernel = kernel;
         _loggerFactory = LoggerFactory.Create(builder => builder.AddSerilog(Log.Logger));
+        _kernel = kernel;
+        _kernel.ImportPluginFromType<AlertsPlugin>();
     }
 
     [HttpPost("/single")]
     public async Task<IActionResult> SingularAgent()
     {
-        // add some plugins to the kernel
-        _kernel.ImportPluginFromType<AlertsPlugin>();
-
         // create a chat agent for Jack Sparrow using existing kernel (along with its plugins)
         ChatCompletionAgent jackSparrowAgent = new() 
         {
-            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
-            Kernel = _kernel,
-            Instructions = """
-                You are Jack Sparrow talking in Jack Sparrow style.
-                Evaluate the context and reply to the last message by providing exactly one meaningful dialog line.
-                The dialog line must be only one sentence of maximum 10 words.
-                """,
-            Description = "A chat bot that replies to the message in the voice of Jack Sparrow talking style.",
-            Name = "JackSparrow",
             Id = "JackSparrow_01",
-        };
-
-        // create a chat group for agents
-        AgentGroupChat chat = new() 
-        {
+            Name = "JackSparrow",
+            Description = "A chat bot that replies to the message in the voice of Jack Sparrow talking style.",
+            Instructions = InstructionsTemplate,
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() })
+            {
+                ["name"] = "Jack Sparrow",
+                ["words_count"] = "20"
+            },
+            Kernel = _kernel,
             LoggerFactory = _loggerFactory
         };
 
-        var goal = """
+        ChatHistory chat = [];
+        chat.AddUserMessage("""
             Jack Sparrow makes a bad joke about Don Quijote's taste in drinks.
             Jack Sparrow gets a threat from Don Quijote and Don Quijote is launching a fake attack.
-            """;
+            """
+        );
 
-        chat.AddChatMessage(new ChatMessageContent(AuthorRole.User, goal));
+        AgentThread thread = new ChatHistoryAgentThread();
 
-        // check jackSparrow agent reaction to the chat
-        await foreach (var content in chat.InvokeAsync(jackSparrowAgent))
+        await foreach (var content in jackSparrowAgent.InvokeAsync(chat, thread))
         {
-            if (content.Role == AuthorRole.Assistant)
-            {
-                PrintHelper.PrintColoredLine($">>>>>>> {content.Role} [{content.AuthorName}] > {content.Content}");
-            }
+            PrintHelper.PrintColoredLine($">>>>>>> {content.Message.Role} [{content.Message.AuthorName}] > {content.Message.Content}");
         }
 
-        Console.WriteLine($"IS COMPLETE: {chat.IsComplete}\n");
-
-        var response = await GetChatHistory(chat);
-
-        return Ok(response.ToString());
+        return Ok();
     }
 
     [HttpPost("/strategy/terminator/aggregator")]
     public async Task<IActionResult> AgentWithAggregatorTerminationStrategy()
     {
-        _kernel.ImportPluginFromType<AlertsPlugin>();
-
         ChatCompletionAgent jackSparrowAgent = new()
         {
-            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
-            Instructions = """
-            You are Jack Sparrow talking in Jack Sparrow style.
-            Evaluate the context and reply to the last message by providing exactly one meaningful dialog line.
-            The dialog line must be only one sentence of maximum 10 words.
-            """,
+            Instructions = InstructionsTemplate,
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() })
+            {
+                ["name"] = "Jack Sparrow",
+                ["words_count"] = "10"
+            },
             Description = "A chat bot that replies to the message in the voice of Jack Sparrow talking style.",
             Name = "JackSparrow",
             Id = "JackSparrow_01",
+            LoggerFactory = _loggerFactory
         };
 
         ChatCompletionAgent yodaAgent = new()
         {
-            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
-            Instructions = """
-                You are Yoda talking in Yoda style.
-                Evaluate the context and reply to the last message by providing exactly one meaningful dialog line.
-                The dialog line must be only one sentence of maximum 10 words.
-                """,
+            Instructions = InstructionsTemplate,
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() })
+            {
+                ["name"] = "Yoda",
+                ["words_count"] = "10"
+            },
             Description = "A chat bot that replies to the message in the voice of Yoda talking style.",
             Name = "Yoda",
             Id = "Yoda_01",
+            LoggerFactory = _loggerFactory
         };
 
         AgentGroupChat chat = new(yodaAgent, jackSparrowAgent)
@@ -151,12 +144,9 @@ public class AgentsController : ControllerBase
 
         Console.WriteLine($">>>>>>> {AuthorRole.User} > {goal}.");
 
-        await foreach (var content in chat.InvokeAsync())
+        await foreach (var message in chat.InvokeAsync())
         {
-            if (content.Role == AuthorRole.Assistant) 
-            {
-                PrintHelper.PrintColoredLine($">>>>>>> {content.Role} [{content.AuthorName}] > {content.Content}");
-            }
+            PrintHelper.PrintColoredLine($">>>>>>> {message.Role} [{message.AuthorName}] > {message.Content}");
         }
 
         Console.WriteLine($"IS COMPLETE: {chat.IsComplete}\n");
@@ -169,34 +159,34 @@ public class AgentsController : ControllerBase
     [HttpPost("/strategy/terminator/threshold")]
     public async Task<IActionResult> AgentWithThresholdTerminationStrategy()
     {
-        _kernel.ImportPluginFromType<AlertsPlugin>();
-
         ChatCompletionAgent jackSparrowAgent = new()
         {
-            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
-            Instructions = """
-            You are Jack Sparrow talking in Jack Sparrow style.
-            Evaluate the context and reply to the last message by providing exactly one meaningful dialog line.
-            The dialog line must be only one sentence of maximum 10 words.
-            """,
+            Instructions = InstructionsTemplate,
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() })
+            {
+                ["name"] = "Jack Sparrow",
+                ["words_count"] = "10"
+            },
             Description = "A chat bot that replies to the message in the voice of Jack Sparrow talking style.",
             Name = "JackSparrow",
             Id = "JackSparrow_01",
+            LoggerFactory = _loggerFactory
         };
 
         ChatCompletionAgent yodaAgent = new()
         {
-            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
-            Instructions = """
-                You are Yoda talking in Yoda style.
-                Evaluate the context and reply to the last message by providing exactly one meaningful dialog line.
-                The dialog line must be only one sentence of maximum 10 words.
-                """,
+            Instructions = InstructionsTemplate,
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() })
+            {
+                ["name"] = "Yoda",
+                ["words_count"] = "10"
+            },
             Description = "A chat bot that replies to the message in the voice of Yoda talking style.",
             Name = "Yoda",
             Id = "Yoda_01",
+            LoggerFactory = _loggerFactory
         };
 
         AgentGroupChat chat = new(jackSparrowAgent, yodaAgent)
@@ -223,10 +213,7 @@ public class AgentsController : ControllerBase
 
         await foreach (var content in chat.InvokeAsync())
         {
-            if (content.Role == AuthorRole.Assistant)
-            {
-                PrintHelper.PrintColoredLine($">>>>>>> {content.Role} [{content.AuthorName}] > {content.Content}");
-            }
+            PrintHelper.PrintColoredLine($">>>>>>> {content.Role} [{content.AuthorName}] > {content.Content}");
         }
 
         Console.WriteLine($"IS COMPLETE: {chat.IsComplete}\n");
@@ -239,34 +226,34 @@ public class AgentsController : ControllerBase
     [HttpPost("/strategy/terminator/matching")]
     public async Task<IActionResult> AgentWithMatchingTerminationStrategy()
     {
-        _kernel.ImportPluginFromType<AlertsPlugin>();
-
         ChatCompletionAgent jackSparrowAgent = new()
         {
-            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
-            Instructions = """
-            You are Jack Sparrow talking in Jack Sparrow style.
-            Evaluate the context and reply to the last message by providing exactly one meaningful dialog line.
-            The dialog line must be only one sentence of maximum 10 words.
-            """,
+            Instructions = InstructionsTemplate,
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() })
+            {
+                ["name"] = "Jack Sparrow",
+                ["words_count"] = "20"
+            },
             Description = "A chat bot that replies to the message in the voice of Jack Sparrow talking style.",
             Name = "JackSparrow",
             Id = "JackSparrow_01",
+            LoggerFactory = _loggerFactory
         };
 
         ChatCompletionAgent yodaAgent = new()
         {
-            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
-            Instructions = """
-                You are Yoda talking in Yoda style.
-                Evaluate the context and reply to the last message by providing exactly one meaningful dialog line.
-                The dialog line must be only one sentence of maximum 10 words.
-                """,
+            Instructions = InstructionsTemplate,
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() })
+            {
+                ["name"] = "Yoda",
+                ["words_count"] = "20"
+            },
             Description = "A chat bot that replies to the message in the voice of Yoda talking style.",
             Name = "Yoda",
             Id = "Yoda_01",
+            LoggerFactory = _loggerFactory
         };
 
         var terminationFunction = KernelFunctionFactory.CreateFromPrompt("""
@@ -378,58 +365,62 @@ public class AgentsController : ControllerBase
          // create a chat agent for Jack Sparrow using existing kernel (along with its plugins)
         ChatCompletionAgent jackSparrowAgent = new()
         {
-            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
-            Instructions = """
-                You are Jack Sparrow talking in Jack Sparrow style.
-                Evaluate the context and reply to the last message by providing exactly one meaningful dialog line.
-                The dialog line must be only one sentence of maximum 10 words.
-                """,
+            Instructions = InstructionsTemplate,
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() })
+            {
+                ["name"] = "Jack Sparrow",
+                ["words_count"] = "10"
+            },
             Description = "A chat bot that replies to the message in the voice of Jack Sparrow talking style.",
             Name = "JackSparrow",
             Id = "JackSparrow_01",
+            LoggerFactory = _loggerFactory
         };
 
         ChatCompletionAgent yodaAgent = new()
         {
-            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
-            Instructions = """
-                You are Yoda talking in Yoda style.
-                Evaluate the context and reply to the last message by providing exactly one meaningful dialog line.
-                The dialog line must be only one sentence of maximum 10 words.
-                """,
+            Instructions = InstructionsTemplate,
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() })
+            {
+                ["name"] = "Yoda",
+                ["words_count"] = "10"
+            },
             Description = "A chat bot that replies to the message in the voice of Yoda talking style.",
             Name = "Yoda",
             Id = "Yoda_01",
+            LoggerFactory = _loggerFactory
         };
 
         ChatCompletionAgent shakespeareAgent = new()
         {
-            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
-            Instructions = """
-                You are Shakespeare talking in Shakespeare style.
-                Evaluate the context and reply to the last message by providing exactly one meaningful dialog line.
-                The dialog line must be only one sentence of maximum 10 words.
-                """,
+            Instructions = InstructionsTemplate,
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() })
+            {
+                ["name"] = "Shakespeare",
+                ["words_count"] = "20"
+            },
             Description = "A chat bot that replies to the message in the voice of Shakespeare talking style.",
             Name = "Shakespeare",
             Id = "Shakespeare_01",
+            LoggerFactory = _loggerFactory
         };
 
         ChatCompletionAgent donQuijoteAgent = new()
         {
-            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
             Kernel = _kernel,
-            Instructions = """
-                You are Don Quijote talking in Don Quijote style.
-                Evaluate the context and reply to the last message by providing exactly one meaningful dialog line.
-                The dialog line must be only one sentence of maximum 10 words.
-                """,
+            Instructions = InstructionsTemplate,
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() })
+            {
+                ["name"] = "Don Quijote",
+                ["words_count"] = "20"
+            },
             Description = "A chat bot that replies to the message in the voice of Don Quijote talking style.",
             Name = "DonQuijote",
             Id = "DonQuijote_01",
+            LoggerFactory = _loggerFactory
         };
 
         // create a chat group for characters' agents
@@ -445,6 +436,7 @@ public class AgentsController : ControllerBase
             Description = "An agent that aggregates the responses of other agents in a chat.",
             Name = "Aggregator",
             Id = "Aggregator_01",
+            LoggerFactory = _loggerFactory
         };
 
         AgentGroupChat aggregatedChat = new(aggregatorAgent)
@@ -460,7 +452,7 @@ public class AgentsController : ControllerBase
 
         ChatCompletionAgent dialogWriterAgent = new()
         {
-            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions }),
+            Arguments = new KernelArguments(new OpenAIPromptExecutionSettings { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() }),
             Kernel = _kernel,
             Instructions = """
                 You are an expert playwright specialized in drama and comedy. 
@@ -478,6 +470,7 @@ public class AgentsController : ControllerBase
             Description = "Determines if a tool can be utilized to achieve a result.",
             Name = "DialogWriter",
             Id = "DialogWriter_01",
+            LoggerFactory = _loggerFactory
         };
 
 

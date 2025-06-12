@@ -10,7 +10,7 @@ namespace Apex.SemanticKernelAgents.Plugins;
 public class AlertsPlugin
 {
     private readonly ITextToAudioService _textToAudioService;
-
+    
     public AlertsPlugin(ITextToAudioService textToAudioService)
     {
         _textToAudioService = textToAudioService;
